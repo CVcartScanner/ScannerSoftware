@@ -7,3 +7,4 @@ The file includes everything you need to get started.
 4.  CVcartScanner Instructions.pdf: digital version of the instruction card included with the cartScanner hardware.
 
 Support email: cartScanner@yahoo.com
+Download: [CVcartScanner.zip](https://github.com/CVcartScanner/ScannerSoftware/raw/9686268a82d8ee7e35341bcd766d1651e5c3295d/CVcartScanner.zip)
