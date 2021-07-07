@@ -8,4 +8,4 @@ The zip file below includes everything you need to get started.
 
 Support email: cartScanner@yahoo.com
 
-Download: [CVcartScanner.zip](https://github.com/CVcartScanner/ScannerSoftware/raw/9686268a82d8ee7e35341bcd766d1651e5c3295d/CVcartScanner.zip)
+Download: [CVcartScanner.zip](https://github.com/CVcartScanner/ScannerSoftware/raw/main/CVcartScanner.zip)
