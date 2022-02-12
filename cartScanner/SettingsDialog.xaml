@@ -1,0 +1,90 @@
+﻿<Window x:Class="CVcartScanner.SettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CV cartScanner Settings" Height="294.892" Width="788.501" ResizeMode="NoResize" Icon="Resources/cvcs.ico" Loaded="Window_Loaded" WindowStartupLocation="CenterOwner">
+    <Grid Background="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}" Margin="0,0,-1,17">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="7" />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Margin="10,184,0,0" Width="737" Grid.Column="1" CornerRadius="5" Height="42" VerticalAlignment="Top" RenderTransformOrigin="0.544,1.099"/>
+
+        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Margin="10,45,0,0" Width="737" Grid.Column="1" CornerRadius="5" Height="134" VerticalAlignment="Top" RenderTransformOrigin="0.544,1.099"/>
+
+        <StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Width="0"/>
+        <Image HorizontalAlignment="Left" Height="30" Margin="10,10,0,0" VerticalAlignment="Top" Width="235" Source="CVcartScanner.png" Grid.Column="1"/>
+        <CheckBox x:Name="Check_Box" Content="CheckBox" HorizontalAlignment="Left" Margin="27,53,0,0" VerticalAlignment="Top" RenderTransformOrigin="-0.265,0.429" Grid.Column="1" Height="22" Width="18"/>
+        <Label Content="Executable:" Grid.Column="1" HorizontalAlignment="Left" Margin="45,75,0,0" VerticalAlignment="Top" Height="30" Width="98"/>
+        <TextBox x:Name="Address_Box" Grid.Column="1" HorizontalAlignment="Left" Height="25" Margin="130,80,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="605"/>
+        <Button x:Name="Browse_Button" Content="Browse" Grid.Column="1" HorizontalAlignment="Left" Margin="643,110,0,0" VerticalAlignment="Top" Width="75" Height="24" Click="Browse_Button_Click">
+            <Button.Resources>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10"/>
+                </Style>
+            </Button.Resources>
+            <Button.Effect>
+                <DropShadowEffect/>
+            </Button.Effect>
+        </Button>
+        <Label Content="Command line options:" Grid.Column="1" HorizontalAlignment="Left" Margin="45,105,0,0" VerticalAlignment="Top" Height="30" Width="164"/>
+        <TextBox x:Name="CmdLineOptions" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="209,111,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="281"/>
+        <Button Content="Save" Grid.Column="1" HorizontalAlignment="Left" Margin="540,191,0,0" VerticalAlignment="Top" Width="75" RenderTransformOrigin="0.507,-0.083" Height="24" Click="Save_Button_Click">
+            <Button.Resources>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10"/>
+                </Style>
+            </Button.Resources>
+            <Button.Effect>
+                <DropShadowEffect/>
+            </Button.Effect>
+        </Button>
+        <Button x:Name="PortScanButton" Content="Detect cartScanner" Grid.Column="1" HorizontalAlignment="Left" Margin="27,191,0,0" VerticalAlignment="Top" Width="146" RenderTransformOrigin="0.313,0.119" Click="PortScanButton_Click">
+            <Button.Resources>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10"/>
+                </Style>
+            </Button.Resources>
+            <Button.Effect>
+                <DropShadowEffect/>
+            </Button.Effect>
+        </Button>
+        <Label Content="Port:" Grid.Column="1" HorizontalAlignment="Left" Margin="27,135,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="PortTextBox" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="72,140,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="111" IsReadOnly="True" MaxLines="1" BorderBrush="Black" Cursor="Arrow" Focusable="False" SelectionBrush="White" BorderThickness="1" TextAlignment="Center"/>
+        <Button Content="Close" Grid.Column="1" HorizontalAlignment="Left" Margin="643,191,0,0" VerticalAlignment="Top" Width="75" Click="Close_Button_Click">
+            <Button.Resources>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10"/>
+                </Style>
+            </Button.Resources>
+            <Button.Effect>
+                <DropShadowEffect/>
+            </Button.Effect>
+        </Button>
+        <Button Content="Run in emulator after scanning" Grid.Column="1"  BorderThickness="0" HorizontalAlignment="Left" Margin="45,48,0,0" VerticalAlignment="Top" Width="215" Background="White" BorderBrush="White" Height="22" Click="Button_Click">
+            <Button.Style>
+                <Style TargetType="{x:Type Button}">
+                    <Setter Property="Background" Value="Green"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="{x:Type Button}">
+                                <Border Background="{TemplateBinding Background}" BorderBrush="Black" BorderThickness="0">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="White"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+        </Button>
+    </Grid>
+</Window>

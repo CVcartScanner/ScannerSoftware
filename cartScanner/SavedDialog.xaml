@@ -1,0 +1,22 @@
+﻿<Window x:Name="Saved_Dialog" x:Class="CVcartScanner.SavedDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Height="182.722" Width="388.405" ResizeMode="NoResize" Icon="Resources/cvcs.ico" Loaded="Window_Loaded" WindowStartupLocation="CenterOwner" Topmost="True" Title="Save Confirmation">
+    <Grid>
+        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="48" VerticalAlignment="Top" Width="350" CornerRadius="5" Margin="10,79,0,0">
+            <Button x:Name="OkButton" Content="OK" IsDefault="True" Click="OkButton_OnClick" Margin="9">
+                <Button.Resources>
+                    <Style TargetType="{x:Type Border}">
+                        <Setter Property="CornerRadius" Value="10"/>
+                    </Style>
+                </Button.Resources>
+                <Button.Effect>
+                    <DropShadowEffect/>
+                </Button.Effect>
+            </Button>
+        </Border>
+
+        
+        <Image HorizontalAlignment="Center" Height="33" VerticalAlignment="Top" Width="236" Source="CVcartScanner.png" Margin="69,0,77,0"/>
+        <Label Content="Settings Saved" Height="36" Margin="126,38,137,80"/>
+    </Grid>
+</Window>
