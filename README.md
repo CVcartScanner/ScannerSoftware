@@ -1,5 +1,5 @@
 # CV cartScanner Project
-This repo/software is based on software and hardware designs by Matthew Hironeus.  Detailed information can be found
+This repo/software is based on software and hardware designs by Matthew Heironimus.  Detailed information can be found
 here: https://github.com/MHeironimus/ColecoVisionCartridgeReader
 
 
