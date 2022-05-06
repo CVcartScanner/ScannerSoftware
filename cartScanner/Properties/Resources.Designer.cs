@@ -133,6 +133,15 @@ namespace CVcartScanner.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to READ 64K ALT.
+        /// </summary>
+        internal static string cRead64Alt {
+            get {
+                return ResourceManager.GetString("cRead64Alt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to READ 64K CARTRIDGE.
         /// </summary>
         internal static string cRead64kCommand {

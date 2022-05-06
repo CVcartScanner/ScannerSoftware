@@ -17,6 +17,7 @@ namespace CVcartScanner
         public event RoutedEventHandler SettingsDialog;
         public event RoutedEventHandler Read32;
         public event RoutedEventHandler Read64;
+        public event RoutedEventHandler Read64Alt1;
         public event RoutedEventHandler Read128;
         public event RoutedEventHandler Read256;
         public event RoutedEventHandler Read512;
@@ -103,6 +104,16 @@ namespace CVcartScanner
             }
         }
 
+        public void Click_64kAlt1(object sender, RoutedEventArgs e)
+        {
+            if (CheckComPort())
+            {
+                _64kAlternate1.Background = Brushes.LightBlue;
+                DisableAllButtons();
+                Read64Alt1?.Invoke(sender, e);
+            }
+        }
+
         public void Click_128k(object sender, RoutedEventArgs e)
         {
             if (CheckComPort())
@@ -123,7 +134,7 @@ namespace CVcartScanner
             }
         }
 
-        public void Click_512k(object sender, RoutedEventArgs e)
+        private void Click_512k(object sender, RoutedEventArgs e)
         {
             if (CheckComPort())
             {
@@ -154,6 +165,8 @@ namespace CVcartScanner
             _32kButton.Opacity = .5;
             _64kButton.IsHitTestVisible = false;
             _64kButton.Opacity = .5;
+            _64kAlternate1.IsHitTestVisible = false;
+            _64kAlternate1.Opacity = .5;
             _128kButton.IsHitTestVisible = false;
             _128kButton.Opacity = .5;
             _256kButton.IsHitTestVisible = false;

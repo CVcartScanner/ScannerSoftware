@@ -141,6 +141,9 @@
   <data name="cRead512KCommand" xml:space="preserve">
     <value>READ 512K CARTRIDGE</value>
   </data>
+  <data name="cRead64Alt" xml:space="preserve">
+    <value>READ 64K ALT</value>
+  </data>
   <data name="cRead64kCommand" xml:space="preserve">
     <value>READ 64K CARTRIDGE</value>
   </data>

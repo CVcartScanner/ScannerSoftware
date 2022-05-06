@@ -39,6 +39,7 @@ namespace CVcartScanner
             _mainView.FileSaveAs += MainView_FileSaveAs;
             _mainView.Read32 += MainView_Read32k;
             _mainView.Read64 += MainView_Read64k;
+            _mainView.Read64Alt1 += MainView_Read64kAlt1;
             _mainView.Read128 += MainView_Read128k;
             _mainView.Read256 += MainView_Read256k;
             _mainView.Read512 += MainView_Read512k;
@@ -115,9 +116,18 @@ namespace CVcartScanner
         private void MainView_Read64k(object sender, EventArgs e)
         {
             cartridgeSize = 0x10000;
-            chipSize = 0x2000;
+            chipSize = 0x4000;
             cartridgeAddressStart = 0x8000;
             commandToBeSent = Properties.Resources.cRead64kCommand;
+            ProcessRequest();
+        }
+
+        private void MainView_Read64kAlt1(object sender, EventArgs e)
+        {
+            cartridgeSize = 0x10000;
+            chipSize = 0x2000;
+            cartridgeAddressStart = 0x8000;
+            commandToBeSent = Properties.Resources.cRead64Alt;
             ProcessRequest();
         }
 
@@ -337,6 +347,7 @@ namespace CVcartScanner
             _cartridgeBuffer = new byte[cartridgeClearSize];
         }
 
+        //check to see if the string sent is a hex value, if not, throw error.
         private static byte ParseByte(string currentLine)
         {
 
@@ -374,7 +385,6 @@ namespace CVcartScanner
             }
         }
 
-        /// <summary>
         /// Is the indicated 8k cartridge blank?
         /// </summary>
         /// <param name="chipIndex">
@@ -400,12 +410,6 @@ namespace CVcartScanner
         #endregion
 
         #region CartridgeReaderBackground Events
-
-    //   [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Globalization",
-    //   "CA1303:Do not pass literals as localized parameters",
-    //   MessageId = "System.IO.Ports.SerialPort.WriteLine(System.String)",
-    //   Justification = "This is a command sent to the Arduiono, not a string read by a user.")]
-    //   Commented due to visual studio 2019 not recognizing the code quality plugin previously used.
         private void CartridgeReaderBackground_DoWork(object sender, DoWorkEventArgs e)
         {
             if (!(sender is BackgroundWorker worker))
@@ -421,7 +425,7 @@ namespace CVcartScanner
 
             const int cUpdateProgressEvery = 0x0250;
 
-            
+
             using (var serialPort = new SerialPort(arduinoSettings.SerialPort, arduinoSettings.BaudRate))
             {
                 // Set the read/write timeouts
@@ -433,7 +437,7 @@ namespace CVcartScanner
 
                 // Tell the Arduino to read all of the cartridge.
                 serialPort.WriteLine(commandToBeSent);
-                
+
                 var readLine = serialPort.ReadLine().Trim();
                 if (!Properties.Resources.cStartMessage.Equals(readLine, StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -447,12 +451,15 @@ namespace CVcartScanner
 
                 int currentAddress = 0;
 
-                // Verify the Arduino returns the START: message.
-                string currentLine = serialPort.ReadLine().Trim();
-                while (!Properties.Resources.cEndMessage.Equals(currentLine, StringComparison.InvariantCultureIgnoreCase)
+                // Verify the Arduino returns the BEGIN: message.
+                string currentBlock = serialPort.ReadLine().Trim();
+                while (!Properties.Resources.cEndMessage.Equals(currentBlock, StringComparison.InvariantCultureIgnoreCase)
                     && (currentAddress < cartridgeSize))
                 {
-                    _cartridgeBuffer[currentAddress++] = ParseByte(currentLine);
+                    for (int i = 0; i < currentBlock.Length; i += 2)
+                    {
+                        _cartridgeBuffer[currentAddress++] = ParseByte(currentBlock.Substring(i, 2));
+                    }
 
                     if ((currentAddress % cUpdateProgressEvery) == 0)
                     {
@@ -470,9 +477,9 @@ namespace CVcartScanner
 
                     try
                     {
-                        currentLine = serialPort.ReadLine().Trim();
+                        currentBlock = serialPort.ReadLine().Trim();
                     }
-                    catch 
+                    catch
                     {
                         EnableAllButtons();
                         throw new InvalidProgramException("Cartscanner Disconnected");
@@ -480,12 +487,12 @@ namespace CVcartScanner
 
                 } // while there is still data
 
-                if (!Properties.Resources.cEndMessage.Equals(currentLine, StringComparison.InvariantCultureIgnoreCase))
+                if (!Properties.Resources.cEndMessage.Equals(currentBlock, StringComparison.InvariantCultureIgnoreCase))
                 {
                     EnableAllButtons();
                     throw new InvalidOperationException(
                         string.Format(Properties.Resources.ArduinoUnexpectedValueMessage,
-                        Properties.Resources.cEndMessage, currentLine));
+                        Properties.Resources.cEndMessage, currentBlock));
                 }
 
                 if (currentAddress != cartridgeSize)
@@ -507,6 +514,20 @@ namespace CVcartScanner
             } // using serialPort
 
             e.Result = true;
+        }
+
+        private String ConvertHexInputToString(String hexString)
+        {
+            {
+                StringBuilder stringBuilder = new StringBuilder();
+                for (int i = 0; i < hexString.Length; i += 2)
+                {
+                    string hexStringTemp = hexString.Substring(i, 2);
+                    stringBuilder.Append(Convert.ToChar(Convert.ToUInt32(hexStringTemp, 16)));
+                }
+
+                return stringBuilder.ToString();
+            }
         }
 
         private void CartridgeReaderBackground_ProgressChanged(object sender, ProgressChangedEventArgs e)
@@ -581,6 +602,10 @@ namespace CVcartScanner
             _mainView._64kButton.Background = Brushes.LightGray;
             _mainView._64kButton.Opacity = 1;
             _mainView._64kButton.IsHitTestVisible = true;
+            _mainView._64kAlternate1.IsEnabled = true;
+            _mainView._64kAlternate1.Background = Brushes.LightGray;
+            _mainView._64kAlternate1.Opacity = 1;
+            _mainView._64kAlternate1.IsHitTestVisible = true;
             _mainView._128kButton.IsEnabled = true;
             _mainView._128kButton.Background = Brushes.LightGray;
             _mainView._128kButton.IsHitTestVisible = true;
@@ -593,6 +618,7 @@ namespace CVcartScanner
             _mainView._512kButton.Background = Brushes.LightGray;
             _mainView._512kButton.IsHitTestVisible = true;
             _mainView._512kButton.Opacity = 1;
+
 
             _ = new MainWindow();
         }
