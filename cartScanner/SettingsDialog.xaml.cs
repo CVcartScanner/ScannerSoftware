@@ -58,8 +58,18 @@ namespace CVcartScanner
                 Check_Box.IsChecked = false;
             }
 
-            SaveSettings();
+            String activePort;
+            if (!ComPortName.TryCreate(PortTextBox.Text, out activePort))
+            {
+                System.Windows.MessageBox.Show(this, "Enter the COM port number using digits only. The number must be greater than zero.", "Invalid COM Port", MessageBoxButton.OK, MessageBoxImage.Warning);
+                PortTextBox.Focus();
+                PortTextBox.SelectAll();
+                return;
+            }
+
+            SaveSettings(activePort);
             GetSettings();
+            PortStatusText.Text = activePort + " saved.";
             SavedDialog dialog = new SavedDialog
             {
                 Owner = this
@@ -67,23 +77,26 @@ namespace CVcartScanner
             dialog.Show();
         }
 
-        //This retrieves the settings which are controlled by windows and inserts them into the proper text boxes on the form.
+        // Retrieve the current per-user settings and insert them into the form.
         private void GetSettings()
         {
-            Address_Box.Text = Properties.Settings.Default.EmulatorLocation;
-            Check_Box.IsChecked = Properties.Settings.Default.SaveRunState;
-            CmdLineOptions.Text = Properties.Settings.Default.CMDOptions;
-            PortTextBox.Text = Properties.Settings.Default.COMPort; 
+            Address_Box.Text = UserSettings.Default.EmulatorLocation;
+            Check_Box.IsChecked = UserSettings.Default.SaveRunState;
+            CmdLineOptions.Text = UserSettings.Default.CMDOptions;
+            String portNumber;
+            PortTextBox.Text = ComPortName.TryGetNumber(UserSettings.Default.COMPort, out portNumber)
+                ? portNumber
+                : String.Empty;
         }
 
-        //This saves settings to the programs properties.settings file.  Windows handles the rest.
-        private void SaveSettings()
+        // Save settings to CartScanner's per-user settings file.
+        private void SaveSettings(String activePort)
         {
-            Properties.Settings.Default.CMDOptions = CmdLineOptions.Text;
-            Properties.Settings.Default.EmulatorLocation = Address_Box.Text; 
-            Properties.Settings.Default.SaveRunState = (bool) Check_Box.IsChecked;
-            Properties.Settings.Default.COMPort = PortTextBox.Text;
-            Properties.Settings.Default.Save();
+            UserSettings.Default.CMDOptions = CmdLineOptions.Text;
+            UserSettings.Default.EmulatorLocation = Address_Box.Text; 
+            UserSettings.Default.SaveRunState = (bool) Check_Box.IsChecked;
+            UserSettings.Default.COMPort = activePort;
+            UserSettings.Default.Save();
         }
 
         //Tied to the settings dialog form, this method is activated when the 'Detect cartScanner' button is pressed.  It gets a list of active ports from 
@@ -94,27 +107,71 @@ namespace CVcartScanner
         private void PortScanButton_Click(object sender, RoutedEventArgs e)
         {
             Cursor = Cursors.Wait;
-           
-            var serialPorts = SerialPort.GetPortNames();
+            PortStatusText.Text = "Scanning COM ports...";
 
-            if (serialPorts.Length < 1)
+            try
             {
-                PortTextBox.Text = "No Active Ports";
-            }
-            else
-            {
-                String activePort = ValidateSerialPort(serialPorts);
+                var serialPorts = SerialPort.GetPortNames();
 
-                if (null != activePort)
+                if (serialPorts.Length < 1)
                 {
-                    PortTextBox.Text = activePort;
+                    PortStatusText.Text = "No active COM ports found.";
                 }
                 else
                 {
-                    PortTextBox.Text = "Not Found";
+                    String activePort = ValidateSerialPort(serialPorts);
+
+                    if (null != activePort)
+                    {
+                        String portNumber;
+                        if (ComPortName.TryGetNumber(activePort, out portNumber))
+                        {
+                            PortTextBox.Text = portNumber;
+                            PortStatusText.Text = "cartScanner found on " + activePort + ".";
+                        }
+                    }
+                    else
+                    {
+                        PortStatusText.Text = "cartScanner not found.";
+                    }
                 }
             }
-            Cursor = Cursors.Arrow; 
+            finally
+            {
+                Cursor = Cursors.Arrow;
+            }
+        }
+
+        private void PortTextBox_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+        {
+            e.Handled = !ContainsOnlyDigits(e.Text);
+        }
+
+        private void PortTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
+        {
+            String pastedText = e.DataObject.GetData(typeof(String)) as String;
+            if (!ContainsOnlyDigits(pastedText))
+            {
+                e.CancelCommand();
+            }
+        }
+
+        private static bool ContainsOnlyDigits(String text)
+        {
+            if (String.IsNullOrEmpty(text))
+            {
+                return false;
+            }
+
+            foreach (char character in text)
+            {
+                if (character < '0' || character > '9')
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         //Receives a string array of active ports on host computer.  Each port is then sent a request for status.  If the cartScanner sees this, it returns

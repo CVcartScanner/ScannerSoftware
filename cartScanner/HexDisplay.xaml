@@ -5,7 +5,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:CVcartScanner"
       mc:Ignorable="d"
-      Title="Hex Display" Height="743.909" Width="729.856" ResizeMode="NoResize" Icon="Resources/cvcs.ico" Loaded="Window_Loaded" WindowStartupLocation="Manual">
+      Title="Hex Display" Height="743.909" Width="739.856" ResizeMode="NoResize" Icon="Resources/cvcs.ico" Loaded="Window_Loaded" WindowStartupLocation="Manual">
 
     <Grid>
         <Grid.ColumnDefinitions>

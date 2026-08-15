@@ -1,4 +1,8 @@
 ﻿using System.Reflection;
+// CV cartScanner is distributed under the GNU LGPL v3 or later.
+// See the LICENSE file at the repository root.
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 using System.Runtime.InteropServices;
 using System.Windows;
 
@@ -10,8 +14,8 @@ using System.Windows;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Matthew Heironimus/OriginalJohn")]
 [assembly: AssemblyProduct("CVcartScanner")]
-[assembly: AssemblyCopyright("© 2014 Matthew Heironimus/ © 2022 OriginalJohn")]
-[assembly: AssemblyTrademark("All rights reserved.")]
+[assembly: AssemblyCopyright("© 2014 Matthew Heironimus / © 2022-2026 OriginalJohn and contributors")]
+[assembly: AssemblyTrademark("GNU LGPL v3 or later")]
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
@@ -48,6 +52,5 @@ using System.Windows;
 //
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
-[assembly: AssemblyVersion("0.1.*")]
-//[assembly: AssemblyVersion("0.1.0.0")]
-//[assembly: AssemblyFileVersion("0.1.0.0")]
+[assembly: AssemblyVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.0.0")]

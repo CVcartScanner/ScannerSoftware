@@ -1,0 +1,20 @@
+# Visual Studio and MSBuild output
+.vs/
+**/bin/
+**/obj/
+*.suo
+*.user
+
+# Arduino build output
+*.eep
+*.elf
+*.hex
+
+# Local archives and backups
+*.zip
+backups/
+*_Archive_*/
+
+# Operating-system files
+Thumbs.db
+.DS_Store

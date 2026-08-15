@@ -1,240 +1,398 @@
-// ColecoVision / ADAM Cartridge Reader
-// for the Arduino UNO
+/*
+ * CV cartScanner firmware for the Arduino UNO.
+ * Copyright (C) 2014 Matthew Heironimus
+ * Copyright (C) 2022-2026 OriginalJohn and CartScanner contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ */
+
+#include "FastShiftOut.h"
+
+// ColecoVision / ADAM Cartridge Reader for the Arduino UNO
+//
 // 2014-11-25 - Initial Version - Matthew Heironimus/MHeironimus
 // 2022-02-11 - Updated code - OriginalJohn
-//              Tested -  32k, 128k, 256k cartridges, SGM, ORIG, HB
-//              Big Thanks to Tursi, ChildOfCV, youki, NIAD and chart45. 
+// 2022-06-01 - Speed optimizations
+// 2026-08-12 - Added 128k, 256k, and 512k SGC cartridge dumping, info provided by Pitou!
+// 2026-08-12 - Fixed bank handling and added assorted optimizations
+//
+// Tested 32k, 64k, 64k Pixelboy, 128k, 256k, 512k, 128k and 256k SGM, 
+// including original and homebrew cartridges.
+//
 //----------------------------------------------------------------------------------
 
-// Arduino Pins
-const int gcChipSelectLine[4] = { A0, A1, A2, A3 };
-const int gcShiftRegisterClock = 11;
-const int gcStorageRegisterClock = 12;
-const int gcSerialAddress = 10;
-const int gcDataBit[8] = { 2, 3, 4, 5, 6, 7, 8, 9 };
-const unsigned int baseAddress = 0x8000;
-const unsigned int bankStart = 0xc000;
-const unsigned int bankSize = 0x4000;
+// Arduino pins. The optimized port code below is specific to the Arduino UNO:
+// D2-D7 = PD2-PD7, D8-D12 = PB0-PB4, A0-A3 = PC0-PC3.
+const uint8_t gcShiftRegisterClock = 11;
+const uint8_t gcStorageRegisterClock = 12;
+const uint8_t gcSerialAddress = 10;
+FastShiftOut FSO(gcSerialAddress, gcShiftRegisterClock, MSBFIRST);
 
-// Shifts a 16-bit value out to a shift register.
-// Parameters:
-//   dataPin - Arduino Pin connected to the data pin of the shift register.
-//   clockPin - Arduino Pin connected to the data clock pin of the shift register.
+const uint16_t bankSize16k = 0x4000;
+const uint16_t bankSize32k = 0x8000;
+const uint16_t bankStart = 0xc000;
+const uint16_t megaCartReadableBankSize = bankSize16k - 0x40;
+const uint16_t sgcWindowSize = 0x2000;
+const uint8_t sgcPageCount128k = 16;
+const uint8_t sgcPageCount256k = 32;
+const uint8_t sgcPageCount512k = 64;
+const uint8_t asciiBlockSize = 32;
+const uint8_t binaryBlockSize = 64;
+
+bool binaryOutput = false;
+uint8_t outputByteCount = 0;
+uint8_t binaryBlock[binaryBlockSize];
+char asciiBlock[asciiBlockSize * 2];
+
+// Set all four active-low cartridge chip selects HIGH.
 //----------------------------------------------------------------------------------
-void shiftOut16(int dataPin, int clockPin, int bitOrder, int value)
+inline void DisableChips()
 {
-  // Shift out highbyte for MSBFIRST
-  shiftOut(dataPin, clockPin, bitOrder, (bitOrder == MSBFIRST ? (value >> 8) : value));
-  // shift out lowbyte for MSBFIRST
-  shiftOut(dataPin, clockPin, bitOrder, (bitOrder == MSBFIRST ? value : (value >> 8)));
+  PORTC |= 0x0f;
 }
 
-// Select which chip on the cartridge to read (LOW = Active).
-// Use -1 to set all chip select lines HIGH.
+// Select one of A0-A3 while preserving A4 and A5.
 //----------------------------------------------------------------------------------
-void SelectChip(byte chipToSelect)
+inline void SelectChip(uint8_t chipToSelect)
 {
-  for (int currentChipLine = 0; currentChipLine < 4; currentChipLine++)
+  uint8_t value = PORTC | 0x0f;
+  if (chipToSelect < 4)
   {
-    digitalWrite(gcChipSelectLine[currentChipLine], (chipToSelect != currentChipLine));
+    value &= (uint8_t)~(1 << chipToSelect);
   }
+  PORTC = value;
 }
 
-// Set Address Lines
+// Shift and latch a 16-bit address without changing the chip-select state.
 //----------------------------------------------------------------------------------
-void SetAddress(unsigned int address)
+inline void ShiftAddress(uint16_t address)
 {
-  SelectChip(-1);
-
-  // Disable shift register output while loading address
-  digitalWrite(gcStorageRegisterClock, LOW);
-
-  // Write Out Address
-  shiftOut16(gcSerialAddress, gcShiftRegisterClock, MSBFIRST, address);
-
-  // Enable shift register output
-  digitalWrite(gcStorageRegisterClock, HIGH);
-
-  int chipToSelect;
-
-  if (address < 0xA000) {
-    chipToSelect = 0;
-  } else if (address < 0xC000) {
-    chipToSelect = 1;
-  } else if (address < 0xE000) {
-    chipToSelect = 2;
-  } else {
-    chipToSelect = 3;
-  }
-
-  SelectChip(chipToSelect);
+  PORTB &= (uint8_t)~_BV(PB4);
+  FSO.write16(address);
+  PORTB |= _BV(PB4);
 }
 
-// Read data lines
+// Put an address on the bus, then select its 8k cartridge region.
 //----------------------------------------------------------------------------------
-void ReadDataLines(boolean writeToConsole)
+inline void SetAddress(uint16_t address)
 {
-  const char cHexLookup[16] = {
-    '0', '1', '2', '3', '4', '5', '6', '7',
-    '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
-  };
+  DisableChips();
+  ShiftAddress(address);
 
-  int highNibble = 0;
-  int lowNibble = 0;
-  boolean dataBits[8];
-  char byteReadHex[4];
-
-  for (int currentBit = 0; currentBit < 8; currentBit++)
+  if (address < 0xa000)
   {
-    dataBits[currentBit] = digitalRead(gcDataBit[currentBit]);
+    SelectChip(0);
+  }
+  else if (address < 0xc000)
+  {
+    SelectChip(1);
+  }
+  else if (address < 0xe000)
+  {
+    SelectChip(2);
+  }
+  else
+  {
+    SelectChip(3);
+  }
+}
+
+// Read D0-D7 from the two UNO input ports in one operation per port.
+//----------------------------------------------------------------------------------
+inline uint8_t ReadDataByte()
+{
+  return (uint8_t)(((PIND >> 2) & 0x3f) | ((PINB & 0x03) << 6));
+}
+
+// Switch the cartridge data bus between reads and SGC register writes.
+//----------------------------------------------------------------------------------
+inline void SetDataLinesInput()
+{
+  DDRD &= (uint8_t)~0xfc;
+  DDRB &= (uint8_t)~0x03;
+  PORTD |= 0xfc;
+  PORTB |= 0x03;
+}
+
+inline void SetDataLinesOutput()
+{
+  // The SGC reference begins its register sequence with zero on the data bus.
+  // Clear the output latches before enabling the drivers to avoid a HIGH pulse
+  // left over from the normal-read pull-ups.
+  PORTD &= (uint8_t)~0xfc;
+  PORTB &= (uint8_t)~0x03;
+  DDRD |= 0xfc;
+  DDRB |= 0x03;
+}
+
+inline void WriteDataByte(uint8_t value)
+{
+  PORTD = (uint8_t)((PORTD & 0x03) | ((value & 0x3f) << 2));
+  PORTB = (uint8_t)((PORTB & 0xfc) | (value >> 6));
+  delayMicroseconds(1);
+}
+
+// Buffered serial output. Binary is used by the current Windows application;
+// ASCII remains available for older applications and serial-terminal testing.
+//----------------------------------------------------------------------------------
+void FlushOutput()
+{
+  if (outputByteCount == 0)
+  {
+    return;
   }
 
-  highNibble = (dataBits[7] << 3) + (dataBits[6] << 2) + (dataBits[5] << 1) + dataBits[4];
-  lowNibble = (dataBits[3] << 3) + (dataBits[2] << 2) + (dataBits[1] << 1) + dataBits[0];
-
-  if (writeToConsole) {
-    Serial.write(cHexLookup[highNibble]);
-    Serial.write(cHexLookup[lowNibble]);
+  if (binaryOutput)
+  {
+    Serial.write(binaryBlock, outputByteCount);
+  }
+  else
+  {
+    Serial.write((const uint8_t *)asciiBlock, outputByteCount * 2);
     Serial.println();
   }
+
+  outputByteCount = 0;
 }
 
-// Read all of the data from a 32k cartridge.
-//----------------------------------------------------------------------------------
-void ReadCartridge()
+void BeginDump(bool useBinaryOutput)
 {
-  unsigned int baseAddress = 0x8000;
-
+  binaryOutput = useBinaryOutput;
+  outputByteCount = 0;
   Serial.println("BEGIN:");
-  // 128k in hex 0x20000, 256k 0x40000, 512k 0x80000
-  // Read Current Chip (cartridge is 32K, each chip is 8k)
+}
 
-  for (unsigned int currentAddress = 0; currentAddress < 0x8000; currentAddress++)
+inline void OutputByte(uint8_t value)
+{
+  if (binaryOutput)
   {
-    SetAddress(baseAddress + currentAddress);
-    ReadDataLines(true);
+    binaryBlock[outputByteCount++] = value;
+    if (outputByteCount == binaryBlockSize)
+    {
+      FlushOutput();
+    }
   }
+  else
+  {
+    uint8_t highNibble = value >> 4;
+    uint8_t lowNibble = value & 0x0f;
+    asciiBlock[outputByteCount * 2] = highNibble < 10 ? '0' + highNibble : 'A' + highNibble - 10;
+    asciiBlock[outputByteCount * 2 + 1] = lowNibble < 10 ? '0' + lowNibble : 'A' + lowNibble - 10;
+    outputByteCount++;
+    if (outputByteCount == asciiBlockSize)
+    {
+      FlushOutput();
+    }
+  }
+}
 
+void EndDump()
+{
+  FlushOutput();
   Serial.println(":FINISHED");
 }
 
-// Read all of the data from a 64k cartridge.
+// Special thanks to Pitou! for sharing their original source and research,
+// which made this implementation possible.  
 //----------------------------------------------------------------------------------
-void Read64kCartridge()
+void SelectSgcPage(uint8_t page)
 {
-  const int numBanks64k = (65536 - 0x4000l + bankSize - 1) / bankSize;
-  ReadMegaCart(numBanks64k);  
+  DisableChips();
+  SelectChip(3);
+
+  ShiftAddress(0xfffc);
+  SetDataLinesOutput();
+  WriteDataByte(0x00);
+  ShiftAddress(0xfffd);
+  WriteDataByte(page);
+  ShiftAddress(0xfffe);
+  WriteDataByte(0x00);
+  ShiftAddress(0xffff);
+  WriteDataByte(0x00);
+
+  DisableChips();
+  SetDataLinesInput();
+  delay(1);
 }
 
-// Read all of the data from a 128k cartridge.
-//----------------------------------------------------------------------------------
-void Read128kCartridge()
+void ReadSgcCartridge(uint8_t pageCount, bool useBinaryOutput)
 {
-  const int numBanks128k = (131072 - 0x4000l + bankSize - 1) / bankSize;
-  ReadMegaCart(numBanks128k);
-}
+  BeginDump(useBinaryOutput);
 
-// Read all of the data from a 256k cartridge.
-//----------------------------------------------------------------------------------
-void Read256kCartridge()
-{
-  const int numBanks256 = (262144 - 0x4000l + bankSize - 1) / bankSize;
-  ReadMegaCart(numBanks256);
-}
-
-// Read all of the data from a 512k cartridge.
-//----------------------------------------------------------------------------------
-void Read512kCartridge()
-{
-  const int numBanks256 = (524288 - 0x4000l + bankSize - 1) / bankSize;
-  ReadMegaCart(numBanks256);
-}
-
-
-void ReadMegaCart(int numBanks) {
-    unsigned int bankAddress = 0xffc0;
-  Serial.println("BEGIN:");
-
-   // Read additional banks
-  for (int bank = 0; bank < numBanks; bank++)
+  for (uint8_t page = 0; page < pageCount; page++)
   {
-    SetAddress(bankAddress++);
-    for (unsigned int currentAddress = 0; currentAddress < bankSize-0x40; currentAddress++) 
+    SelectSgcPage(page);
+    for (uint16_t currentAddress = 0; currentAddress < sgcWindowSize; currentAddress++)
     {
       SetAddress(bankStart + currentAddress);
-      ReadDataLines(true);  
-    }
-    // Simulate reading the last 0x40
-    for(unsigned int c = 0; c < 0x40; c++)
-    {
-      Serial.println("00");
+      OutputByte(ReadDataByte());
     }
   }
 
-  // Read constant bank
-  for (unsigned int currentAddress = 0; currentAddress < 0x4000; currentAddress++) 
-  {
-    SetAddress(baseAddress + currentAddress);
-    ReadDataLines(true);  
-  }
-
-    Serial.println(":FINISHED");
+  EndDump();
 }
 
-// Returns the next line from the serial port as a String.
+void NormalRead(uint16_t readSize)
+{
+  for (uint16_t currentAddress = 0; currentAddress < readSize; currentAddress++)
+  {
+    SetAddress(bankSize32k + currentAddress);
+    OutputByte(ReadDataByte());
+  }
+}
+
+void ReadCartridge(bool useBinaryOutput)
+{
+  BeginDump(useBinaryOutput);
+  NormalRead(bankSize32k);
+  EndDump();
+}
+
+void Read64kBank(uint16_t shiftAddress)
+{
+  SetAddress(shiftAddress);
+
+  for (uint16_t currentAddress = 0; currentAddress < bankSize16k; currentAddress++)
+  {
+    uint16_t absoluteAddress = bankStart + currentAddress;
+    if (absoluteAddress > 0xff90)
+    {
+      SetAddress(shiftAddress);
+    }
+    SetAddress(absoluteAddress);
+    OutputByte(ReadDataByte());
+  }
+}
+
+void Read64kCartridgeAlternate(bool useBinaryOutput)
+{
+  BeginDump(useBinaryOutput);
+  NormalRead(bankSize16k);
+  Read64kBank(0xff90);
+  Read64kBank(0xffa0);
+  Read64kBank(0xffb0);
+  EndDump();
+}
+
+// Read MegaCart banks without touching the final 64-byte bank-select window.
+// The skipped selector bytes retain the established zero-padding behavior.
+// numAdditionalBanks excludes the fixed $8000-$BFFF bank.
+//----------------------------------------------------------------------------------
+void ReadMegaCart(uint8_t numAdditionalBanks, bool useBinaryOutput)
+{
+  uint16_t bankAddress = (uint16_t)(0xffff - numAdditionalBanks);
+  BeginDump(useBinaryOutput);
+
+  for (uint8_t bank = 0; bank < numAdditionalBanks; bank++)
+  {
+    SetAddress(bankAddress++);
+
+    for (uint16_t currentAddress = 0; currentAddress < megaCartReadableBankSize; currentAddress++)
+    {
+      SetAddress(bankStart + currentAddress);
+      OutputByte(ReadDataByte());
+    }
+
+    for (uint8_t padding = 0; padding < 0x40; padding++)
+    {
+      OutputByte(0x00);
+    }
+  }
+
+  for (uint16_t currentAddress = 0; currentAddress < bankSize16k; currentAddress++)
+  {
+    SetAddress(bankSize32k + currentAddress);
+    OutputByte(ReadDataByte());
+  }
+
+  EndDump();
+}
+
+void Read64kCartridge(bool useBinaryOutput)
+{
+  ReadMegaCart(3, useBinaryOutput);
+}
+
+void Read128kCartridge(bool useBinaryOutput)
+{
+  ReadMegaCart(7, useBinaryOutput);
+}
+
+void Read256kCartridge(bool useBinaryOutput)
+{
+  ReadMegaCart(15, useBinaryOutput);
+}
+
+void Read512kCartridge(bool useBinaryOutput)
+{
+  ReadMegaCart(31, useBinaryOutput);
+}
+
+void Test()
+{
+  BeginDump(false);
+  NormalRead(bankSize32k);
+  EndDump();
+}
+
+// Return the next serial line. Commands are at most 80 characters.
 //----------------------------------------------------------------------------------
 String SerialReadLine()
 {
-  const int BUFFER_SIZE = 81;
-  char lineBuffer[BUFFER_SIZE];
-  int currentPosition = 0;
+  const uint8_t bufferSize = 81;
+  char lineBuffer[bufferSize];
+  uint8_t currentPosition = 0;
   int currentValue;
 
   do
   {
-    // Read until we get the next character
     do
     {
       currentValue = Serial.read();
     } while (currentValue == -1);
 
-    // ignore '\r' characters
-    if (currentValue != '\r')
+    if (currentValue != '\r' && currentPosition < bufferSize - 1)
     {
-      lineBuffer[currentPosition] = currentValue;
-      currentPosition++;
+      lineBuffer[currentPosition++] = (char)currentValue;
     }
+  } while (currentValue != '\n');
 
-  } while ((currentValue != '\n') && (currentPosition < BUFFER_SIZE));
-  lineBuffer[currentPosition - 1] = 0;
-
+  if (currentPosition > 0 && lineBuffer[currentPosition - 1] == '\n')
+  {
+    currentPosition--;
+  }
+  lineBuffer[currentPosition] = 0;
   return String(lineBuffer);
 }
 
 void setup()
 {
-  // Setup Serial Monitor
   Serial.begin(57600);
 
-  // Setup Chip Select Pins
-  for (int chipLine = 0; chipLine < 4; chipLine++)
+  // A0-A3 chip selects, D10-D12 shift-register controls.
+  DDRC |= 0x0f;
+  DDRB |= _BV(PB2) | _BV(PB3) | _BV(PB4);
+  DisableChips();
+  PORTB &= (uint8_t)~_BV(PB3);
+  PORTB |= _BV(PB4);
+  SetDataLinesInput();
+
+  while (!Serial)
   {
-    pinMode(gcChipSelectLine[chipLine], OUTPUT);
-  }
-
-  // Setup Serial Address Pins
-  pinMode(gcShiftRegisterClock, OUTPUT);
-  pinMode(gcStorageRegisterClock, OUTPUT);
-  pinMode(gcSerialAddress, OUTPUT);
-
-  // Setup Data Pins
-  for (int currentBit = 0; currentBit < 8; currentBit++)
-  {
-    pinMode(gcDataBit[currentBit], INPUT_PULLUP);
-  }
-
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for Leonardo only.
+    ;
   }
 
   SetAddress(0);
@@ -242,39 +400,92 @@ void setup()
 
 void loop()
 {
-  if (Serial.available() > 0)
+  if (Serial.available() == 0)
   {
-    String lineRead = SerialReadLine();
-    lineRead.toUpperCase();
+    return;
+  }
 
-    if (lineRead == "READ CARTRIDGE")
-    {
-      ReadCartridge();
-    } // lineRead = "Read All"
+  String lineRead = SerialReadLine();
+  lineRead.toUpperCase();
 
-    if (lineRead == "READ 64K CARTRIDGE")
-    {
-      Read64kCartridge();
-    } // Receive 64k cartridge request and read all.
-    
-    if (lineRead == "READ 128K CARTRIDGE")
-    {
-      Read128kCartridge();
-    } // Receive 128k cartridge request and read all.
-
-    if (lineRead == "READ 256K CARTRIDGE")
-    {
-      Read256kCartridge();
-    } // Receive 256k cartridge request and read all.
-
-    if (lineRead == "READ 512K CARTRIDGE")
-    {
-      Read512kCartridge();
-    } // Receive 512k cartridge request and read all.
-
-    if (lineRead == "STATUS")
-    {
-      Serial.println("CVCARTSCANNER");
-    } // if status request is received, respond to identify this is the cartscanner.
+  if (lineRead == "READ CARTRIDGE BINARY")
+  {
+    ReadCartridge(true);
+  }
+  else if (lineRead == "READ 64K CARTRIDGE BINARY")
+  {
+    Read64kCartridge(true);
+  }
+  else if (lineRead == "READ 64K ALT BINARY")
+  {
+    Read64kCartridgeAlternate(true);
+  }
+  else if (lineRead == "READ 128K CARTRIDGE BINARY")
+  {
+    Read128kCartridge(true);
+  }
+  else if (lineRead == "READ 256K CARTRIDGE BINARY")
+  {
+    Read256kCartridge(true);
+  }
+  else if (lineRead == "READ 512K CARTRIDGE BINARY")
+  {
+    Read512kCartridge(true);
+  }
+  else if (lineRead == "READ 128K SGC CARTRIDGE BINARY")
+  {
+    ReadSgcCartridge(sgcPageCount128k, true);
+  }
+  else if (lineRead == "READ 256K SGC CARTRIDGE BINARY")
+  {
+    ReadSgcCartridge(sgcPageCount256k, true);
+  }
+  else if (lineRead == "READ 512K SGC CARTRIDGE BINARY")
+  {
+    ReadSgcCartridge(sgcPageCount512k, true);
+  }
+  else if (lineRead == "READ CARTRIDGE")
+  {
+    ReadCartridge(false);
+  }
+  else if (lineRead == "READ 64K CARTRIDGE")
+  {
+    Read64kCartridge(false);
+  }
+  else if (lineRead == "READ 64K ALT")
+  {
+    Read64kCartridgeAlternate(false);
+  }
+  else if (lineRead == "READ 128K CARTRIDGE")
+  {
+    Read128kCartridge(false);
+  }
+  else if (lineRead == "READ 256K CARTRIDGE")
+  {
+    Read256kCartridge(false);
+  }
+  else if (lineRead == "READ 512K CARTRIDGE")
+  {
+    Read512kCartridge(false);
+  }
+  else if (lineRead == "READ 128K SGC CARTRIDGE")
+  {
+    ReadSgcCartridge(sgcPageCount128k, false);
+  }
+  else if (lineRead == "READ 256K SGC CARTRIDGE")
+  {
+    ReadSgcCartridge(sgcPageCount256k, false);
+  }
+  else if (lineRead == "READ 512K SGC CARTRIDGE")
+  {
+    ReadSgcCartridge(sgcPageCount512k, false);
+  }
+  else if (lineRead == "STATUS")
+  {
+    Serial.println("CVCARTSCANNER");
+  }
+  else if (lineRead == "TEST")
+  {
+    Test();
   }
 }

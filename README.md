@@ -1,19 +1,33 @@
-# CV cartScanner Project
-This repo/software is based on software and hardware designs by Matthew Heironimus.  Detailed information can be found
-here: https://github.com/MHeironimus/ColecoVisionCartridgeReader
+# CV cartScanner 2.0
 
+CV cartScanner reads ColecoVision and ADAM cartridges through an Arduino UNO-based cartridge-reader interface. Version 2.0 adds optimized binary transfers and SGC cartridge dumping at 128 KB, 256 KB, and 512 KB.
 
-# CV cartScanner Software
-The zip file below includes everything you need to get started.
+This project is based on the original hardware, Arduino firmware, and Windows software by Matthew Heironimus: https://github.com/MHeironimus/ColecoVisionCartridgeReader
 
-1.  CVcartScanner.exe : This is the main executable front-end, accesses the cartscanner and reads a cartridge.
-2.  CP210x_6.7.4 (Folder): driver files to interface with the cartScanner via USB
-3.  CP210x_6.7 (OLDER) (Folder): driver files to interface with the cartScanner via USB for older operating systems.
-4.  CVcartScanner.pdf: digital version of the instruction card included with the cartScanner hardware.
+## Repository contents
 
-Support email: cartScanner@yahoo.com
+- `Release/CVcartScanner.exe` — compiled Windows interface, version 2.0.
+- `cartScanner/` — complete C# and WPF source required to build the Windows interface.
+- `ArduinoSketch/cartScanner/cartScanner.ino` — current Arduino UNO firmware.
+- `ArduinoSketch/cartScanner/FastShiftOut.*` — bundled address-shift dependency used by the firmware.
 
-Download: [CVcartScanner.zip](https://github.com/CVcartScanner/ScannerSoftware/raw/main/CVcartScanner.zip)
+Generated `bin` and `obj` directories are intentionally excluded from the repository.
 
-NEW CUSTOMERS DOWNLOAD: If you have recently received your cartscanner, please download this version: [CVcartScanner2.zip](https://github.com/CVcartScanner/ScannerSoftware/raw/main/CVcartScanner2.zip)
+## Firmware
 
+To update firmware, first connect your cartScanner and review Settings.  If you do not have a com port showing, click the Detect cartScanner button.  A com port should show up.  
+Open `ArduinoSketch/cartScanner/cartScanner.ino` in the Arduino IDE and select **Arduino Uno** as the target board. The required FastShiftOut source is included in the sketch directory, so no separate library installation is required.
+
+The Windows application and Arduino firmware must be updated together because version 2.0 uses binary serial commands for cartridge transfers.
+
+## Windows application
+
+Open `cartScanner/cartScanner.csproj` with Visual Studio and build the **Release** configuration. The project targets .NET Framework 4.5 and uses only framework references to ensure compatibility on older Windows systems.
+
+## Licensing
+
+Except for the bundled FastShiftOut files, CV cartScanner is licensed under the **GNU Lesser General Public License version 3 or later**. See `LICENSE`.
+
+FastShiftOut 0.4.3 is copyright Rob Tillaart and is distributed under the MIT License. See `ArduinoSketch/cartScanner/FastShiftOut-LICENSE.txt`.
+
+Support: cartScanner@yahoo.com

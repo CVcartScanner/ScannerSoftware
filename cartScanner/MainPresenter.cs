@@ -2,12 +2,10 @@
 using System.ComponentModel;
 using System.IO;
 using System.IO.Ports;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Windows;
 using System.Windows.Shell;
-using System.Diagnostics;
 using System.Windows.Media;
 
 namespace CVcartScanner
@@ -20,6 +18,8 @@ namespace CVcartScanner
         private int chipSize;
         private int cartridgeAddressStart;
         private string commandToBeSent;
+        private bool binaryTransfer;
+        private bool truncateBlankTail;
 
         private readonly MainWindow _mainView;
 
@@ -43,6 +43,9 @@ namespace CVcartScanner
             _mainView.Read128 += MainView_Read128k;
             _mainView.Read256 += MainView_Read256k;
             _mainView.Read512 += MainView_Read512k;
+            _mainView.ReadSgc128 += MainView_ReadSgc128;
+            _mainView.ReadSgc256 += MainView_ReadSgc256;
+            _mainView.ReadSgc512 += MainView_ReadSgc512;
             _mainView.InfoDialog += MainView_InfoDialog;
             _mainView.SettingsDialog += MainView_SettingsDialog;
             _mainView.HexDisplay += MainView_HexDisplay;
@@ -106,55 +109,57 @@ namespace CVcartScanner
 
         private void MainView_Read32k(object sender, EventArgs e)
         {
-            cartridgeSize = 0x8000;
-            chipSize = 0x2000;
-            cartridgeAddressStart = 0x8000;
-            commandToBeSent = Properties.Resources.cReadCommand;
-            ProcessRequest();
+            StartRead(0x8000, 0x2000, 0x8000, Properties.Resources.cReadCommand, true);
         }
 
         private void MainView_Read64k(object sender, EventArgs e)
         {
-            cartridgeSize = 0x10000;
-            chipSize = 0x4000;
-            cartridgeAddressStart = 0x8000;
-            commandToBeSent = Properties.Resources.cRead64kCommand;
-            ProcessRequest();
+            StartRead(0x10000, 0x4000, 0x8000, Properties.Resources.cRead64kCommand, false);
         }
 
         private void MainView_Read64kAlt1(object sender, EventArgs e)
         {
-            cartridgeSize = 0x10000;
-            chipSize = 0x2000;
-            cartridgeAddressStart = 0x8000;
-            commandToBeSent = Properties.Resources.cRead64Alt;
-            ProcessRequest();
+            StartRead(0x10000, 0x2000, 0x8000, Properties.Resources.cRead64Alt, false);
         }
 
         private void MainView_Read128k(object sender, EventArgs e) 
         {
-            cartridgeSize = 0x20000;
-            chipSize = 0x2000;
-            cartridgeAddressStart = 0x8000;
-            commandToBeSent = Properties.Resources.cRead128kCommand;
-            ProcessRequest();
+            StartRead(0x20000, 0x2000, 0x8000, Properties.Resources.cRead128kCommand, false);
         }
 
         private void MainView_Read256k(object sender, EventArgs e)
         {
-            cartridgeSize = 0x40000;
-            chipSize = 0x2000;
-            cartridgeAddressStart = 0x8000;
-            commandToBeSent = Properties.Resources.cRead256kCommmand;
-            ProcessRequest();
+            StartRead(0x40000, 0x2000, 0x8000, Properties.Resources.cRead256kCommmand, false);
         }
 
         private void MainView_Read512k(object sender, EventArgs e)
         {
-            cartridgeSize = 0x80000; 
-            chipSize = 0x2000;
-            cartridgeAddressStart = 0x0;
-            commandToBeSent = Properties.Resources.cRead512KCommand;
+            StartRead(0x80000, 0x2000, 0x0, Properties.Resources.cRead512KCommand, false);
+        }
+
+        private void MainView_ReadSgc128(object sender, EventArgs e)
+        {
+            StartRead(0x20000, 0x2000, 0x0, Properties.Resources.cRead128kSgcCommand, false);
+        }
+
+        private void MainView_ReadSgc256(object sender, EventArgs e)
+        {
+            StartRead(0x40000, 0x2000, 0x0, Properties.Resources.cRead256kSgcCommand, false);
+        }
+
+        private void MainView_ReadSgc512(object sender, EventArgs e)
+        {
+            StartRead(0x80000, 0x2000, 0x0, Properties.Resources.cRead512kSgcCommand, false);
+        }
+
+        private void StartRead(int size, int segmentSize, int displayAddress, string command, bool truncate)
+        {
+            cartridgeSize = size;
+            chipSize = segmentSize;
+            cartridgeAddressStart = displayAddress;
+            commandToBeSent = command;
+            binaryTransfer = command.EndsWith(" BINARY", StringComparison.Ordinal);
+            truncateBlankTail = truncate;
             ProcessRequest();
         }
 
@@ -216,31 +221,32 @@ namespace CVcartScanner
 
         private string BuildCartridgeData()
         {
-            var result = new StringBuilder();
-
             if (_cartridgeBuffer == null)
             {
                 EnableAllButtons();
                 throw new InvalidOperationException(Properties.Resources.NoCartridgeFileLoaded);
             }
 
+            var result = new StringBuilder(((_cartridgeSize + 15) / 16) * 80);
             for (int index = 0; index < _cartridgeSize; index += 16)
             {
-                result.Append(BuildLine(cartridgeAddressStart + index, _cartridgeBuffer.Skip(index).Take(16).ToArray()));
+                result.Append(BuildLine(cartridgeAddressStart + index, _cartridgeBuffer,
+                    index, Math.Min(16, _cartridgeSize - index)));
             }
 
             return result.ToString();
         }
 
-        private static string BuildLine(int address, byte[] data)
+        private static string BuildLine(int address, byte[] data, int offset, int count)
         {
             var result = new StringBuilder(80);
             var asciiVersion = new StringBuilder(16);
 
             result.AppendFormat("${0:X4} : ", address);
 
-            foreach (byte t in data)
+            for (int index = 0; index < count; index++)
             {
+                byte t = data[offset + index];
                 result.Append(t.ToString("X2"));
                 result.Append(' ');
 
@@ -254,9 +260,9 @@ namespace CVcartScanner
                 }
             }
 
-            if (data.Length < 16)
+            if (count < 16)
             {
-                for (int missingByte = 0; missingByte < (16 - data.Length); missingByte++)
+                for (int missingByte = 0; missingByte < (16 - count); missingByte++)
                 {
                     result.Append("   ");
                     asciiVersion.Append(" ");
@@ -281,7 +287,7 @@ namespace CVcartScanner
                 filePath = Path.Combine(Path.GetTempPath() + "cartScannerTMP.rom");
             }
 
-            Properties.Settings.Default.TempFile = filePath;
+            UserSettings.Default.TempFile = filePath;
                        
             try
             {
@@ -304,7 +310,7 @@ namespace CVcartScanner
 
         private void ProcessRequest()
         {
-            string activePort = Properties.Settings.Default.COMPort;
+            string activePort = UserSettings.Default.COMPort;
             if (activePort != null)
             {
                 ClearCartridgeData();
@@ -335,6 +341,7 @@ namespace CVcartScanner
             cartridgeReaderBackground.RunWorkerCompleted += CartridgeReaderBackground_RunWorkerCompleted;
                
             _mainView.UpdateProgress(0);
+            _mainView.SetProgressMessage("");
 
             _mainView.TaskbarItemInfo.ProgressState = TaskbarItemProgressState.Normal;
             cartridgeReaderBackground.RunWorkerAsync(arduinoSettings);
@@ -345,6 +352,23 @@ namespace CVcartScanner
         {
             _cartridgeSize = cartridgeClearSize;
             _cartridgeBuffer = new byte[cartridgeClearSize];
+        }
+
+        // Standard CRC-32 (polynomial 0xEDB88320) over the dumped cartridge bytes.
+        // .NET Framework 4.5 has no built-in CRC-32, so compute it directly. Run
+        // after any tail-truncation so the value matches the saved .rom file.
+        private static uint ComputeCrc32(byte[] data, int length)
+        {
+            uint crc = 0xFFFFFFFF;
+            for (int i = 0; i < length; i++)
+            {
+                crc ^= data[i];
+                for (int bit = 0; bit < 8; bit++)
+                {
+                    crc = (crc >> 1) ^ (0xEDB88320 & (uint)(-(int)(crc & 1)));
+                }
+            }
+            return crc ^ 0xFFFFFFFF;
         }
 
         //check to see if the string sent is a hex value, if not, throw error.
@@ -366,9 +390,11 @@ namespace CVcartScanner
         /// </summary>
         private void TruncateCartridge()
         {
-            for (int currentChip = 3; currentChip >= 0; currentChip--)
+            const int maximumSegments = 4;
+            for (int segment = 0; segment < maximumSegments && _cartridgeSize >= chipSize; segment++)
             {
-                if (IsChipEmpty(currentChip))
+                int segmentStart = _cartridgeSize - chipSize;
+                if (IsRangeEmpty(segmentStart, chipSize))
                 {
                     _cartridgeSize -= chipSize;
                 }
@@ -380,25 +406,15 @@ namespace CVcartScanner
 
             if (_cartridgeSize <= 0)
             {
-                EnableAllButtons();
                 throw new InvalidOperationException(Properties.Resources.BlankCartridge);
             }
         }
 
-        /// Is the indicated 8k cartridge blank?
-        /// </summary>
-        /// <param name="chipIndex">
-        /// 0 - 3 : Index of the 8k cartridge (0 = 0x8000 chip, 1 = 0xA000 chip, etc.)
-        /// </param>
-        /// <returns>
-        /// true if indicated 8k cartridge is blank, false if it is not blank.
-        /// </returns>
-        private bool IsChipEmpty(int chipIndex)
+        private bool IsRangeEmpty(int start, int length)
         {
-            for (int currentByte = 0; currentByte < chipSize; currentByte++)
+            for (int currentByte = start; currentByte < start + length; currentByte++)
             {
-                int currentChipAddress = (chipSize*chipIndex) + currentByte;
-                if (_cartridgeBuffer[currentChipAddress] != 0xFF)
+                if (_cartridgeBuffer[currentByte] != 0xFF)
                 {
                     return false;
                 }
@@ -418,30 +434,22 @@ namespace CVcartScanner
             }
             if (!(e.Argument is ArduinoSettings arduinoSettings))
             {
-                EnableAllButtons();
                 throw new InvalidOperationException("cartScanner settings were not specified.");
             }
 
-
             const int cUpdateProgressEvery = 0x0250;
-
-
             using (var serialPort = new SerialPort(arduinoSettings.SerialPort, arduinoSettings.BaudRate))
             {
-                // Set the read/write timeouts
-                serialPort.ReadTimeout = 500;
-                serialPort.WriteTimeout = 500;
+                serialPort.ReadTimeout = 2000;
+                serialPort.WriteTimeout = 2000;
 
                 serialPort.Open();
                 serialPort.DiscardInBuffer();
-
-                // Tell the Arduino to read all of the cartridge.
                 serialPort.WriteLine(commandToBeSent);
 
-                var readLine = serialPort.ReadLine().Trim();
+                string readLine = ReadProtocolLine(serialPort);
                 if (!Properties.Resources.cStartMessage.Equals(readLine, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    EnableAllButtons();
                     throw new InvalidOperationException(
                         string.Format(Properties.Resources.ArduinoUnexpectedValueMessage,
                         Properties.Resources.cStartMessage, readLine));
@@ -450,20 +458,13 @@ namespace CVcartScanner
                 CreateEmptyCartridge(cartridgeSize);
 
                 int currentAddress = 0;
+                int nextProgressUpdate = cUpdateProgressEvery;
+                string endMessage;
 
-                // Verify the Arduino returns the BEGIN: message.
-                string currentBlock = serialPort.ReadLine().Trim();
-                while (!Properties.Resources.cEndMessage.Equals(currentBlock, StringComparison.InvariantCultureIgnoreCase)
-                    && (currentAddress < cartridgeSize))
+                if (binaryTransfer)
                 {
-                    for (int i = 0; i < currentBlock.Length; i += 2)
+                    while (currentAddress < cartridgeSize)
                     {
-                        _cartridgeBuffer[currentAddress++] = ParseByte(currentBlock.Substring(i, 2));
-                    }
-
-                    if ((currentAddress % cUpdateProgressEvery) == 0)
-                    {
-                        // Check for cancel
                         if (worker.CancellationPending)
                         {
                             e.Cancel = true;
@@ -471,63 +472,118 @@ namespace CVcartScanner
                             return;
                         }
 
-                        // Update Progress Window
-                        worker.ReportProgress((int)((currentAddress / (float)cartridgeSize) * 90));
+                        int remaining = cartridgeSize - currentAddress;
+                        currentAddress += ReadBinaryBlock(serialPort, _cartridgeBuffer, currentAddress, remaining);
+                        if (currentAddress >= nextProgressUpdate)
+                        {
+                            ReportReadProgress(worker, currentAddress, cartridgeSize);
+                            nextProgressUpdate = currentAddress + cUpdateProgressEvery;
+                        }
                     }
 
-                    try
-                    {
-                        currentBlock = serialPort.ReadLine().Trim();
-                    }
-                    catch
-                    {
-                        EnableAllButtons();
-                        throw new InvalidProgramException("Cartscanner Disconnected");
-                    }
-
-                } // while there is still data
-
-                if (!Properties.Resources.cEndMessage.Equals(currentBlock, StringComparison.InvariantCultureIgnoreCase))
+                    endMessage = ReadProtocolLine(serialPort);
+                }
+                else
                 {
-                    EnableAllButtons();
+                    string currentBlock = ReadProtocolLine(serialPort);
+                    while (!Properties.Resources.cEndMessage.Equals(currentBlock, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        if (worker.CancellationPending)
+                        {
+                            e.Cancel = true;
+                            e.Result = false;
+                            return;
+                        }
+
+                        if (currentBlock.Length == 0 || (currentBlock.Length & 1) != 0)
+                        {
+                            throw new InvalidOperationException(
+                                string.Format(Properties.Resources.ArduinoUnexpectedValueMessage,
+                                "an even-length hexadecimal data line", currentBlock));
+                        }
+
+                        int blockByteCount = currentBlock.Length / 2;
+                        if (blockByteCount > cartridgeSize - currentAddress)
+                        {
+                            throw new InvalidOperationException(
+                                string.Format(Properties.Resources.UnexpectedCartridgeSize,
+                                currentAddress + blockByteCount, cartridgeSize));
+                        }
+
+                        for (int i = 0; i < currentBlock.Length; i += 2)
+                        {
+                            _cartridgeBuffer[currentAddress++] = ParseByte(currentBlock.Substring(i, 2));
+                        }
+
+                        if (currentAddress >= nextProgressUpdate)
+                        {
+                            ReportReadProgress(worker, currentAddress, cartridgeSize);
+                            nextProgressUpdate = currentAddress + cUpdateProgressEvery;
+                        }
+
+                        currentBlock = ReadProtocolLine(serialPort);
+                    }
+
+                    endMessage = currentBlock;
+                }
+
+                if (!Properties.Resources.cEndMessage.Equals(endMessage, StringComparison.InvariantCultureIgnoreCase))
+                {
                     throw new InvalidOperationException(
                         string.Format(Properties.Resources.ArduinoUnexpectedValueMessage,
-                        Properties.Resources.cEndMessage, currentBlock));
+                        Properties.Resources.cEndMessage, endMessage));
                 }
 
                 if (currentAddress != cartridgeSize)
                 {
-                    EnableAllButtons();
                     throw new InvalidOperationException(
                         string.Format(Properties.Resources.UnexpectedCartridgeSize,
                         currentAddress, cartridgeSize));
                 }
 
-                // Update Progress Window
+                if (truncateBlankTail)
+                {
+                    TruncateCartridge();
+                }
+
                 worker.ReportProgress(100);
-
-                TruncateCartridge();
-
-                // Update Progress Window
-                worker.ReportProgress(100);
-
-            } // using serialPort
+            }
 
             e.Result = true;
         }
 
-        private String ConvertHexInputToString(String hexString)
+        private static int ReadBinaryBlock(SerialPort serialPort, byte[] buffer, int offset, int remaining)
         {
+            try
             {
-                StringBuilder stringBuilder = new StringBuilder();
-                for (int i = 0; i < hexString.Length; i += 2)
+                int bytesRead = serialPort.Read(buffer, offset, Math.Min(4096, remaining));
+                if (bytesRead <= 0)
                 {
-                    string hexStringTemp = hexString.Substring(i, 2);
-                    stringBuilder.Append(Convert.ToChar(Convert.ToUInt32(hexStringTemp, 16)));
+                    throw new IOException("No cartridge bytes were received.");
                 }
-
-                return stringBuilder.ToString();
+                return bytesRead;
             }
+            catch (Exception exception)
+            {
+                throw new InvalidProgramException("Cartscanner disconnected during cartridge transfer.", exception);
+            }
+        }
+
+        private static string ReadProtocolLine(SerialPort serialPort)
+        {
+            try
+            {
+                return serialPort.ReadLine().Trim();
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidProgramException("Cartscanner disconnected during cartridge transfer.", exception);
+            }
+        }
+
+        private static void ReportReadProgress(BackgroundWorker worker, int currentAddress, int expectedSize)
+        {
+            worker.ReportProgress((int)((currentAddress / (float)expectedSize) * 90));
         }
 
         private void CartridgeReaderBackground_ProgressChanged(object sender, ProgressChangedEventArgs e)
@@ -541,26 +597,35 @@ namespace CVcartScanner
 
         private void CartridgeReaderBackground_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
+            bool readSucceeded = e.Error == null && !e.Cancelled && e.Result is bool result && result;
+
             if (e.Error != null)
             {
+                ClearCartridgeData();
                 _mainView.TaskbarItemInfo.ProgressState = TaskbarItemProgressState.Error;
                 MessageBox.Show(_mainView, e.Error.Message, Properties.Resources.CartridgeReadErrorTitle,
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
-            else if (e.Cancelled == false)
+            else if (readSucceeded)
             {
                 ShowCartridgeData();
+                uint crc = ComputeCrc32(_cartridgeBuffer, _cartridgeSize);
+                _mainView.SetProgressMessage(string.Format("Finished CRC: {0:X8}", crc));
+            }
+            else
+            {
+                ClearCartridgeData();
             }
 
             // If checkbox isChecked=True then save cartridge data to temp folder then launch using supplied parameters.
-            if (Properties.Settings.Default.SaveRunState)
+            if (readSucceeded && UserSettings.Default.SaveRunState)
             {
                 SaveFile("", true);
                 try
                 {
-                    String emulatorLocation = Properties.Settings.Default.EmulatorLocation + " ";
+                    String emulatorLocation = UserSettings.Default.EmulatorLocation + " ";
 
-                    String commandLineOptions = Properties.Settings.Default.CMDOptions; 
+                    String commandLineOptions = UserSettings.Default.CMDOptions; 
                     if (null != commandLineOptions && commandLineOptions != "")
                     {
                         commandLineOptions += " ";
@@ -578,8 +643,8 @@ namespace CVcartScanner
                 }
                 catch (Exception exception)
                 {
-                    MessageBox.Show($"Something went wrong starting the emulator.\nEmulator: {Properties.Settings.Default.EmulatorLocation}\n" 
-                        + $"Command Line: {Properties.Settings.Default.CMDOptions}\n"+ exception.Message, "Error Starting Emulator", 
+                    MessageBox.Show($"Something went wrong starting the emulator.\nEmulator: {UserSettings.Default.EmulatorLocation}\n" 
+                        + $"Command Line: {UserSettings.Default.CMDOptions}\n"+ exception.Message, "Error Starting Emulator", 
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                 }
@@ -592,8 +657,9 @@ namespace CVcartScanner
         private void EnableAllButtons()
         {
             _mainView._SettingsButton.IsEnabled = true;
-            _mainView._SaveResults.IsEnabled = true;
-            _mainView._DisplayOutput.IsEnabled = true;
+            bool cartridgeAvailable = _cartridgeBuffer != null && _cartridgeSize > 0;
+            _mainView._SaveResults.IsEnabled = cartridgeAvailable;
+            _mainView._DisplayOutput.IsEnabled = cartridgeAvailable;
             _mainView._32kButton.IsEnabled = true;
             _mainView._32kButton.Background = Brushes.LightGray;
             _mainView._32kButton.Opacity = 1;
@@ -618,9 +684,18 @@ namespace CVcartScanner
             _mainView._512kButton.Background = Brushes.LightGray;
             _mainView._512kButton.IsHitTestVisible = true;
             _mainView._512kButton.Opacity = 1;
-
-
-            _ = new MainWindow();
+            _mainView._Sgc128Button.IsEnabled = true;
+            _mainView._Sgc128Button.Background = Brushes.LightGray;
+            _mainView._Sgc128Button.IsHitTestVisible = true;
+            _mainView._Sgc128Button.Opacity = 1;
+            _mainView._Sgc256Button.IsEnabled = true;
+            _mainView._Sgc256Button.Background = Brushes.LightGray;
+            _mainView._Sgc256Button.IsHitTestVisible = true;
+            _mainView._Sgc256Button.Opacity = 1;
+            _mainView._Sgc512Button.IsEnabled = true;
+            _mainView._Sgc512Button.Background = Brushes.LightGray;
+            _mainView._Sgc512Button.IsHitTestVisible = true;
+            _mainView._Sgc512Button.Opacity = 1;
         }
         #endregion
     }

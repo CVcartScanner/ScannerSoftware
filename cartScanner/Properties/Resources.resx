@@ -133,22 +133,31 @@
     <value>Connecting...</value>
   </data>
   <data name="cRead128kCommand" xml:space="preserve">
-    <value>READ 128K CARTRIDGE</value>
+    <value>READ 128K CARTRIDGE BINARY</value>
   </data>
   <data name="cRead256kCommmand" xml:space="preserve">
-    <value>READ 256K CARTRIDGE</value>
+    <value>READ 256K CARTRIDGE BINARY</value>
   </data>
   <data name="cRead512KCommand" xml:space="preserve">
-    <value>READ 512K CARTRIDGE</value>
+    <value>READ 512K CARTRIDGE BINARY</value>
   </data>
   <data name="cRead64Alt" xml:space="preserve">
-    <value>READ 64K ALT</value>
+    <value>READ 64K ALT BINARY</value>
   </data>
   <data name="cRead64kCommand" xml:space="preserve">
-    <value>READ 64K CARTRIDGE</value>
+    <value>READ 64K CARTRIDGE BINARY</value>
   </data>
   <data name="cReadCommand" xml:space="preserve">
-    <value>READ CARTRIDGE</value>
+    <value>READ CARTRIDGE BINARY</value>
+  </data>
+  <data name="cRead128kSgcCommand" xml:space="preserve">
+    <value>READ 128K SGC CARTRIDGE BINARY</value>
+  </data>
+  <data name="cRead256kSgcCommand" xml:space="preserve">
+    <value>READ 256K SGC CARTRIDGE BINARY</value>
+  </data>
+  <data name="cRead512kSgcCommand" xml:space="preserve">
+    <value>READ 512K SGC CARTRIDGE BINARY</value>
   </data>
   <data name="cReady" xml:space="preserve">
     <value>CVCARTSCANNER</value>

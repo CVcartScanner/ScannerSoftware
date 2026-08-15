@@ -106,7 +106,7 @@ namespace CVcartScanner.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to READ 128K CARTRIDGE.
+        ///   Looks up a localized string similar to READ 128K CARTRIDGE BINARY.
         /// </summary>
         internal static string cRead128kCommand {
             get {
@@ -115,7 +115,7 @@ namespace CVcartScanner.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to READ 256K CARTRIDGE.
+        ///   Looks up a localized string similar to READ 256K CARTRIDGE BINARY.
         /// </summary>
         internal static string cRead256kCommmand {
             get {
@@ -124,7 +124,7 @@ namespace CVcartScanner.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to READ 512K CARTRIDGE.
+        ///   Looks up a localized string similar to READ 512K CARTRIDGE BINARY.
         /// </summary>
         internal static string cRead512KCommand {
             get {
@@ -133,7 +133,7 @@ namespace CVcartScanner.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to READ 64K ALT.
+        ///   Looks up a localized string similar to READ 64K ALT BINARY.
         /// </summary>
         internal static string cRead64Alt {
             get {
@@ -142,7 +142,7 @@ namespace CVcartScanner.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to READ 64K CARTRIDGE.
+        ///   Looks up a localized string similar to READ 64K CARTRIDGE BINARY.
         /// </summary>
         internal static string cRead64kCommand {
             get {
@@ -151,11 +151,38 @@ namespace CVcartScanner.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to READ CARTRIDGE.
+        ///   Looks up a localized string similar to READ CARTRIDGE BINARY.
         /// </summary>
         internal static string cReadCommand {
             get {
                 return ResourceManager.GetString("cReadCommand", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to READ 128K SGC CARTRIDGE BINARY.
+        /// </summary>
+        internal static string cRead128kSgcCommand {
+            get {
+                return ResourceManager.GetString("cRead128kSgcCommand", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to READ 256K SGC CARTRIDGE BINARY.
+        /// </summary>
+        internal static string cRead256kSgcCommand {
+            get {
+                return ResourceManager.GetString("cRead256kSgcCommand", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to READ 512K SGC CARTRIDGE BINARY.
+        /// </summary>
+        internal static string cRead512kSgcCommand {
+            get {
+                return ResourceManager.GetString("cRead512kSgcCommand", resourceCulture);
             }
         }
         

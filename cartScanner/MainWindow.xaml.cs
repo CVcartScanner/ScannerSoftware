@@ -21,6 +21,9 @@ namespace CVcartScanner
         public event RoutedEventHandler Read128;
         public event RoutedEventHandler Read256;
         public event RoutedEventHandler Read512;
+        public event RoutedEventHandler ReadSgc128;
+        public event RoutedEventHandler ReadSgc256;
+        public event RoutedEventHandler ReadSgc512;
         public event RoutedEventHandler SavedDialog;
         public event RoutedEventHandler HexDisplay;
 
@@ -84,6 +87,11 @@ namespace CVcartScanner
             ProgressBar.Value = value;
         }
 
+        public void SetProgressMessage(string text)
+        {
+            ProgressMessage.Content = text;
+        }
+
         public void Click_32k(object sender, RoutedEventArgs e)
         {
             if (CheckComPort())
@@ -144,6 +152,36 @@ namespace CVcartScanner
             }
         }
 
+        private void Click_Sgc128(object sender, RoutedEventArgs e)
+        {
+            if (CheckComPort())
+            {
+                _Sgc128Button.Background = Brushes.LightBlue;
+                DisableAllButtons();
+                ReadSgc128?.Invoke(sender, e);
+            }
+        }
+
+        private void Click_Sgc256(object sender, RoutedEventArgs e)
+        {
+            if (CheckComPort())
+            {
+                _Sgc256Button.Background = Brushes.LightBlue;
+                DisableAllButtons();
+                ReadSgc256?.Invoke(sender, e);
+            }
+        }
+
+        private void Click_Sgc512(object sender, RoutedEventArgs e)
+        {
+            if (CheckComPort())
+            {
+                _Sgc512Button.Background = Brushes.LightBlue;
+                DisableAllButtons();
+                ReadSgc512?.Invoke(sender, e);
+            }
+        }
+
         private void Settings_Click(object sender, RoutedEventArgs e)
         {
             SettingsDialog?.Invoke(sender, e);
@@ -173,6 +211,12 @@ namespace CVcartScanner
             _256kButton.Opacity = .5;
             _512kButton.IsHitTestVisible = false;
             _512kButton.Opacity = .5;
+            _Sgc128Button.IsHitTestVisible = false;
+            _Sgc128Button.Opacity = .5;
+            _Sgc256Button.IsHitTestVisible = false;
+            _Sgc256Button.Opacity = .5;
+            _Sgc512Button.IsHitTestVisible = false;
+            _Sgc512Button.Opacity = .5;
             _SettingsButton.IsEnabled = false;
             _SaveResults.IsEnabled = false;
             _DisplayOutput.IsEnabled = false;
@@ -181,7 +225,7 @@ namespace CVcartScanner
         private bool CheckComPort()
         {
             bool response = true;
-            if (Properties.Settings.Default.COMPort.Length == 0 || Properties.Settings.Default.COMPort.Contains("No")) {
+            if (!ComPortName.IsValid(UserSettings.Default.COMPort)) {
                 response = false;
                 _ = MessageBox.Show("No COM port set.  Please open settings.", "COM Port Not Set", MessageBoxButton.OK, MessageBoxImage.Hand);
             }

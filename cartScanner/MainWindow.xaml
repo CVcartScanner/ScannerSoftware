@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:Properties="clr-namespace:CVcartScanner.Properties" x:Class="CVcartScanner.MainWindow"
-        Title="CV  cartScanner" Height="288.667" Width="735.158" Icon="Resources/cvcs.ico" ResizeMode="CanMinimize" WindowStartupLocation="Manual"
+        Title="CV  cartScanner" Height="288.667" Width="745.158" Icon="Resources/cvcs.ico" ResizeMode="CanMinimize" WindowStartupLocation="Manual"
         >
 
     <Window.Effect>
@@ -31,12 +31,12 @@
 
 
         <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Margin="155,21,0,0" Grid.Row="1" Width="543" Grid.Column="1" CornerRadius="5" Height="142" VerticalAlignment="Top" RenderTransformOrigin="0.544,1.099">
-            <Label Content="Cartridge Size" Margin="9,0,363,111" RenderTransformOrigin="0.189,0.418"/>
+            <Label Content="Cartridge Size" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="9,0,0,0" Width="160" Height="32" Padding="5,2,5,4" VerticalContentAlignment="Center"/>
         </Border>
 
 
 
-        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="142" Margin="1,21,0,0" Grid.Row="1" VerticalAlignment="Top" Width="138" Background="#FFA8E3F2" CornerRadius="5" Grid.Column="1"/>
+        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="142" Margin="1,21,0,0" Grid.Row="1" VerticalAlignment="Top" Width="148" Background="#FFA8E3F2" CornerRadius="5" Grid.Column="1"/>
         <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="48" Margin="1,168,0,0" Grid.Row="1" VerticalAlignment="Top" Width="697" CornerRadius="5" Grid.Column="1"/>
 
         <Button Content="_Exit" HorizontalAlignment="Left" Margin="563,178,0,0" Grid.Row="1" VerticalAlignment="Top" Width="114" RenderTransformOrigin="-0.084,0.748" Click="FileExit_Click" Height="24" Grid.Column="1">
@@ -49,8 +49,8 @@
                 <DropShadowEffect/>
             </Button.Effect>
         </Button>
-        <ProgressBar x:Name="ProgressBar"    HorizontalAlignment="Left" Height="33" Margin="157,119,0,0" Grid.Row="1" VerticalAlignment="Top" Width="541" Foreground="#FFA8E3F2" Grid.Column="1"/>
-        <Button x:Name="_SaveResults" Content="Save Results" HorizontalAlignment="Left" Margin="0,178,0,0" Grid.Row="1" VerticalAlignment="Top" Width="114" Click="FileSaveAs_Click" Height="24" RenderTransformOrigin="-0.111,3.271" Grid.Column="1">
+        <ProgressBar x:Name="ProgressBar"    HorizontalAlignment="Left" Height="33" Margin="155,123,0,0" Grid.Row="1" VerticalAlignment="Top" Width="543" Foreground="#FFA8E3F2" Grid.Column="1"/>
+        <Button x:Name="_SaveResults" Content="Save Results" HorizontalAlignment="Left" Margin="22,178,0,0" Grid.Row="1" VerticalAlignment="Top" Width="114" Click="FileSaveAs_Click" Height="24" RenderTransformOrigin="-0.111,3.271" Grid.Column="1">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="10"/>
@@ -60,7 +60,7 @@
                 <DropShadowEffect/>
             </Button.Effect>
         </Button>
-        <Button Content="_Info" HorizontalAlignment="Left" Margin="597,10,0,0" VerticalAlignment="Top" Width="80" Click="Info_Click" Grid.Column="1" Grid.RowSpan="2" Height="24">
+        <Button Content="_Info" HorizontalAlignment="Left" Margin="597,7.5,0,0" VerticalAlignment="Top" Width="80" Click="Info_Click" Grid.Column="1" Grid.RowSpan="2" Height="28">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="10"/>
@@ -71,11 +71,11 @@
             </Button.Effect>
         </Button>
         <Image HorizontalAlignment="Left" Height="51" Margin="0,-8,0,0" VerticalAlignment="Top" Width="414" Source="CVcartScanner.png" Grid.RowSpan="2" Grid.Column="1"/>
-        <Label x:Name="ProgressMessage" Content="" HorizontalAlignment="Left" Margin="286,133,0,0" Grid.Row="1" VerticalAlignment="Top" Grid.Column="1" Height="30" Width="10"/>
+        <Label x:Name="ProgressMessage" Content="" HorizontalAlignment="Left" Margin="155,123,0,0" Grid.Row="1" VerticalAlignment="Top" Grid.Column="1" Height="33" Width="543" Background="Transparent" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontWeight="Bold" Foreground="Black" Panel.ZIndex="10"/>
         <Label x:Name="Label1" Content="" HorizontalAlignment="Left" Margin="15,1,-77,-50" Grid.Row="2" VerticalAlignment="Top" Width="62" Height="50" FontFamily="Nulshock Rg" FontSize="36" Grid.Column="3"/>
-        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="33" Margin="157,119,0,0" Grid.Row="1" VerticalAlignment="Top" Width="541" Grid.Column="1"/>
-        <Image HorizontalAlignment="Left" Height="137" Margin="0,26,0,0" Grid.Row="1" VerticalAlignment="Top" Width="130" Source="cartScannerAsset.png" Grid.Column="1"/>
-        <Button x:Name="_32kButton" Content="32k" Grid.Column="1" HorizontalAlignment="Left" Margin="221,49,0,0" Grid.Row="1" VerticalAlignment="Top" Width="80" Click="Click_32k" Height="24">
+        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="33" Margin="155,123,0,0" Grid.Row="1" VerticalAlignment="Top" Width="543" Grid.Column="1"/>
+        <Image HorizontalAlignment="Left" Height="137" Margin="10,26,0,0" Grid.Row="1" VerticalAlignment="Top" Width="130" Source="cartScannerAsset.png" Grid.Column="1"/>
+        <Button x:Name="_32kButton" Content="32k" Grid.Column="1" HorizontalAlignment="Left" Margin="190,53,0,0" Grid.Row="1" VerticalAlignment="Top" Width="90" Click="Click_32k" Height="24">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="10"/>
@@ -85,7 +85,7 @@
                 <DropShadowEffect/>
             </Button.Effect>
         </Button>
-        <Button x:Name="_64kButton" Content="64k" Grid.Column="1" HorizontalAlignment="Left" Margin="307,49,0,0" Grid.Row="1" VerticalAlignment="Top" Width="80" Click="Click_64k" Height="24">
+        <Button x:Name="_64kButton" Content="64k" Grid.Column="1" HorizontalAlignment="Left" Margin="286,53,0,0" Grid.Row="1" VerticalAlignment="Top" Width="90" Click="Click_64k" Height="24">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="10"/>
@@ -95,7 +95,7 @@
                 <DropShadowEffect/>
             </Button.Effect>
         </Button>
-        <Button x:Name="_128kButton" Content="128k" Grid.Column="1" HorizontalAlignment="Left" Margin="391,49,0,0" Grid.Row="1" VerticalAlignment="Top" Width="80" Click="Click_128k" Height="24">
+        <Button x:Name="_128kButton" Content="128k" Grid.Column="1" HorizontalAlignment="Left" Margin="382,53,0,0" Grid.Row="1" VerticalAlignment="Top" Width="90" Click="Click_128k" Height="24">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="10"/>
@@ -105,7 +105,7 @@
                 <DropShadowEffect/>
             </Button.Effect>
         </Button>
-        <Button x:Name="_256kButton" Content="256k" Grid.Column="1" HorizontalAlignment="Left" Margin="477,49,0,0" Grid.Row="1" VerticalAlignment="Top" Width="80" Click="Click_256k" Height="24">
+        <Button x:Name="_256kButton" Content="256k" Grid.Column="1" HorizontalAlignment="Left" Margin="478,53,0,0" Grid.Row="1" VerticalAlignment="Top" Width="90" Click="Click_256k" Height="24">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="10"/>
@@ -115,7 +115,7 @@
                 <DropShadowEffect/>
             </Button.Effect>
         </Button>
-        <Button x:Name="_512kButton" Content="512k" Grid.Column="1" HorizontalAlignment="Left" Margin="562,49,0,0" Grid.Row="1" VerticalAlignment="Top" Width="80" Click="Click_512k" Height="24">
+        <Button x:Name="_512kButton" Content="512k" Grid.Column="1" HorizontalAlignment="Left" Margin="574,53,0,0" Grid.Row="1" VerticalAlignment="Top" Width="90" Click="Click_512k" Height="24">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="10"/>
@@ -125,7 +125,7 @@
                 <DropShadowEffect/>
             </Button.Effect>
         </Button>
-        <Button x:Name="_SettingsButton" Content="Settings" Grid.Column="1" HorizontalAlignment="Left" Margin="495,10,0,0" VerticalAlignment="Top" Width="80" Click="Settings_Click" Grid.RowSpan="2" Height="24">
+        <Button x:Name="_SettingsButton" Content="Settings" Grid.Column="1" HorizontalAlignment="Left" Margin="495,7.5,0,0" VerticalAlignment="Top" Width="80" Click="Settings_Click" Grid.RowSpan="2" Height="28">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="10"/>
@@ -135,7 +135,7 @@
                 <DropShadowEffect/>
             </Button.Effect>
         </Button>
-        <Button x:Name="_DisplayOutput" Content="Display Output" HorizontalAlignment="Left" Margin="307,178,0,0" Grid.Row="1" VerticalAlignment="Top" Width="114" RenderTransformOrigin="-0.084,0.748" Click="Display_Output_Click" Height="24" Grid.Column="1">
+        <Button x:Name="_DisplayOutput" Content="Display Output" HorizontalAlignment="Left" Margin="269,178,0,0" Grid.Row="1" VerticalAlignment="Top" Width="161" RenderTransformOrigin="-0.084,0.748" Click="Display_Output_Click" Height="24" Grid.Column="1">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="10"/>
@@ -145,7 +145,37 @@
                 <DropShadowEffect/>
             </Button.Effect>
         </Button>
-        <Button x:Name="_64kAlternate1" Content="64k Alt" Grid.Column="1" HorizontalAlignment="Left" Margin="307,78,0,0" Grid.Row="1" VerticalAlignment="Top" Width="80" Click="Click_64kAlt1" Height="24">
+        <Button x:Name="_64kAlternate1" Content="64k Alt" Grid.Column="1" HorizontalAlignment="Left" Margin="286,82,0,0" Grid.Row="1" VerticalAlignment="Top" Width="90" Click="Click_64kAlt1" Height="24">
+            <Button.Resources>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10"/>
+                </Style>
+            </Button.Resources>
+            <Button.Effect>
+                <DropShadowEffect/>
+            </Button.Effect>
+        </Button>
+        <Button x:Name="_Sgc128Button" Content="128k SGC" Grid.Column="1" HorizontalAlignment="Left" Margin="382,82,0,0" Grid.Row="1" VerticalAlignment="Top" Width="90" Click="Click_Sgc128" Height="24">
+            <Button.Resources>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10"/>
+                </Style>
+            </Button.Resources>
+            <Button.Effect>
+                <DropShadowEffect/>
+            </Button.Effect>
+        </Button>
+        <Button x:Name="_Sgc256Button" Content="256k SGC" Grid.Column="1" HorizontalAlignment="Left" Margin="478,82,0,0" Grid.Row="1" VerticalAlignment="Top" Width="90" Click="Click_Sgc256" Height="24">
+            <Button.Resources>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10"/>
+                </Style>
+            </Button.Resources>
+            <Button.Effect>
+                <DropShadowEffect/>
+            </Button.Effect>
+        </Button>
+        <Button x:Name="_Sgc512Button" Content="512k SGC" Grid.Column="1" HorizontalAlignment="Left" Margin="574,82,0,0" Grid.Row="1" VerticalAlignment="Top" Width="90" Click="Click_Sgc512" Height="24">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
                     <Setter Property="CornerRadius" Value="10"/>
