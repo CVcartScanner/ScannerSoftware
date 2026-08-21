@@ -21,6 +21,9 @@ namespace CVcartScanner
         private bool binaryTransfer;
         private bool truncateBlankTail;
 
+        private const int cSpaceShuttle64kSize = 0x10000;
+        private const uint cSpaceShuttle64kCrc = 0xBB0F6678;
+
         private readonly MainWindow _mainView;
 
         private byte[] _cartridgeBuffer;
@@ -371,6 +374,67 @@ namespace CVcartScanner
             return crc ^ 0xFFFFFFFF;
         }
 
+        // Convert the verified 64K Activision-mapper Space Shuttle image into
+        // a 64K MegaCart image. The replacement instructions remain five bytes
+        // long so every address in the fixed program bank stays unchanged.
+        private static bool TryCreateSpaceShuttleMegaCartImage(byte[] source, int length, out byte[] patched)
+        {
+            patched = null;
+            if (source == null || length != cSpaceShuttle64kSize || source.Length < length)
+            {
+                return false;
+            }
+
+            byte[] fixedBank = new byte[0x4000];
+            Array.Copy(source, 0x0000, fixedBank, 0, 0x4000);
+
+            int ff90Replacements = ReplaceBytePattern(fixedBank,
+                new byte[] { 0x3E, 0xFF, 0x32, 0x90, 0xFF },
+                new byte[] { 0x3A, 0xF8, 0xFF, 0x00, 0x00 });
+            int ffa0Replacements = ReplaceBytePattern(fixedBank,
+                new byte[] { 0x3E, 0xFF, 0x32, 0xA0, 0xFF },
+                new byte[] { 0x3A, 0xF9, 0xFF, 0x00, 0x00 });
+
+            if (ff90Replacements != 3 || ffa0Replacements != 2)
+            {
+                return false;
+            }
+
+            patched = new byte[cSpaceShuttle64kSize];
+            Array.Copy(source, 0x4000, patched, 0x0000, 0x4000);
+            Array.Copy(source, 0x8000, patched, 0x4000, 0x4000);
+            Array.Copy(source, 0xC000, patched, 0x8000, 0x4000);
+            Array.Copy(fixedBank, 0, patched, 0xC000, 0x4000);
+            return true;
+        }
+
+        private static int ReplaceBytePattern(byte[] data, byte[] find, byte[] replacement)
+        {
+            int replacements = 0;
+            for (int offset = 0; offset <= data.Length - find.Length; offset++)
+            {
+                bool matches = true;
+                for (int index = 0; index < find.Length; index++)
+                {
+                    if (data[offset + index] != find[index])
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+
+                if (!matches)
+                {
+                    continue;
+                }
+
+                Array.Copy(replacement, 0, data, offset, replacement.Length);
+                replacements++;
+                offset += find.Length - 1;
+            }
+            return replacements;
+        }
+
         //check to see if the string sent is a hex value, if not, throw error.
         private static byte ParseByte(string currentLine)
         {
@@ -608,9 +672,50 @@ namespace CVcartScanner
             }
             else if (readSucceeded)
             {
-                ShowCartridgeData();
                 uint crc = ComputeCrc32(_cartridgeBuffer, _cartridgeSize);
-                _mainView.SetProgressMessage(string.Format("Finished CRC: {0:X8}", crc));
+                string completionMessage = string.Format("Finished CRC: {0:X8}", crc);
+
+                if (_cartridgeSize == cSpaceShuttle64kSize &&
+                    string.Equals(commandToBeSent, Properties.Resources.cRead64Alt, StringComparison.Ordinal) &&
+                    crc == cSpaceShuttle64kCrc)
+                {
+                    MessageBoxResult patchResult = MessageBox.Show(_mainView,
+                        "Space Shuttle detected.\n\nConvert this dump to the 64 KB MegaCart format for broader emulator compatibility?\n\nChoose No to keep the original archival dump.",
+                        "Space Shuttle Detected",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question,
+                        MessageBoxResult.No);
+
+                    if (patchResult == MessageBoxResult.Yes)
+                    {
+                        byte[] patchedCartridge;
+                        if (TryCreateSpaceShuttleMegaCartImage(_cartridgeBuffer, _cartridgeSize, out patchedCartridge))
+                        {
+                            _cartridgeBuffer = patchedCartridge;
+                            crc = ComputeCrc32(_cartridgeBuffer, _cartridgeSize);
+                            completionMessage = string.Format(
+                                "Space Shuttle MegaCart patch applied. CRC: {0:X8}", crc);
+                        }
+                        else
+                        {
+                            MessageBox.Show(_mainView,
+                                "The Space Shuttle patch could not be applied. The original archival dump has been retained.",
+                                "Space Shuttle Patch Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
+                            completionMessage = string.Format(
+                                "Space Shuttle archival dump retained. CRC: {0:X8}", crc);
+                        }
+                    }
+                    else
+                    {
+                        completionMessage = string.Format(
+                            "Space Shuttle archival dump retained. CRC: {0:X8}", crc);
+                    }
+                }
+
+                ShowCartridgeData();
+                _mainView.SetProgressMessage(completionMessage);
             }
             else
             {
